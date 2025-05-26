@@ -1,0 +1,11 @@
+pdfplumber
+PyPDF2
+sentence-transformers
+langchain
+chromadb
+torch
+transformers
+fastapi
+uvicorn
+numpy
+regex
