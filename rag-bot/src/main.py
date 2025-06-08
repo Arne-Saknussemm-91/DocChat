@@ -1,7 +1,7 @@
 import os
 import argparse
 from pdf_extractor import extract_text_from_pdf
-from chunker import chunk_text
+from chunker import ContextAwareChunker, chunk_text
 from embedder import Embedder
 from vector_store import VectorStore
 from rag_pipeline import RAGPipeline
@@ -10,6 +10,15 @@ def main():
     # Set up argument parser
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, help='Path to the PDF file')
+    # Add arguments for chunking strategy, size, and overlap
+    parser.add_argument("--chunk-size", type=int, default=1000, 
+                        help="Size of text chunks")
+    parser.add_argument("--chunk-overlap", type=int, default=200, 
+                        help="Overlap between text chunks")
+    parser.add_argument("--chunking-strategy", type=str, default="semantic_units",
+                        choices=["semantic_units", "embedding_similarity", 
+                                "topic_segmentation", "default"],
+                        help="Strategy to use for context-aware chunking")
     args = parser.parse_args()
     
     # Get PDF path from args or input
@@ -35,7 +44,23 @@ def main():
 
     # Step 3: Chunk the extracted text
     print("Chunking the extracted text...")
-    text_chunks = chunk_text(extracted_text)
+    # Define default values if they're not provided in args
+    chunk_size = getattr(args, 'chunk_size', 1000)
+    chunk_overlap = getattr(args, 'chunk_overlap', 200)
+    chunking_strategy = getattr(args, 'chunking_strategy', 'semantic_units')
+
+    # Initialize the context-aware chunker with explicit values
+    chunker = ContextAwareChunker(
+        strategy=chunking_strategy,
+        chunk_size=chunk_size,
+        chunk_overlap=chunk_overlap
+    )
+
+    # Get enhanced chunks with metadata
+    chunks_with_metadata = chunker.chunk_text(extracted_text)
+
+    # Extract just the text for backward compatibility
+    text_chunks = [chunk["text"] for chunk in chunks_with_metadata]
 
     # Step 4: Generate embeddings for the text chunks
     print("Generating embeddings for the text chunks...")
